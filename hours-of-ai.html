@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hour of AI — CodePulse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+        ::selection { background: #eab308; color: #000; }
+        .text-gradient { background: linear-gradient(to right, #facc15, #ca8a04); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .glow-text { text-shadow: 0 0 20px rgba(250,204,21,0.3); }
+        .code-editor { background: #09090b; border: 1px solid #27272a; font-family: 'Courier New', monospace; }
+        .code-editor:focus { border-color: rgba(234,179,8,0.5); outline: none; box-shadow: 0 0 20px rgba(234,179,8,0.1); }
+        .step-dot { transition: all 300ms; }
+        .step-dot.active { background: #eab308; box-shadow: 0 0 10px rgba(234,179,8,0.5); }
+        .step-dot.completed { background: #22c55e; }
+        .step-content { animation: fadeInUp 0.4s ease-out; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse-ring { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2); opacity: 0; } }
+        .pulse-ring::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid #eab308; animation: pulse-ring 1.5s ease-out infinite; }
+        @keyframes typewriter { from { width: 0; } to { width: 100%; } }
+        .neuron-pulse { animation: neuronPulse 1s ease-in-out infinite alternate; }
+        @keyframes neuronPulse { from { opacity: 0.4; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
+        .data-flow { animation: dataFlow 2s linear infinite; }
+        @keyframes dataFlow { 0% { stroke-dashoffset: 20; } 100% { stroke-dashoffset: 0; } }
+        .quiz-option { transition: all 200ms; }
+        .quiz-option:hover { border-color: rgba(234,179,8,0.5); background: rgba(234,179,8,0.05); }
+        .quiz-option.correct { border-color: #22c55e; background: rgba(34,197,94,0.1); }
+        .quiz-option.wrong { border-color: #ef4444; background: rgba(239,68,68,0.1); }
+        .quiz-option.disabled { pointer-events: none; opacity: 0.5; }
+        .output-line { animation: fadeInUp 0.3s ease-out; }
+        .sidebar-scroll { scrollbar-width: thin; scrollbar-color: #3f3f46 transparent; }
+        .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 2px; }
+    </style>
+</head>
+<body class="bg-black text-white overflow-hidden h-screen">
+
+    <!-- Top Bar -->
+    <header class="fixed top-0 left-0 right-0 z-50 h-14 flex items-center bg-zinc-950 border-b border-zinc-800">
+        <div class="flex items-center justify-between w-full px-4">
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    <span class="text-[10px] font-bold tracking-widest uppercase hidden sm:inline">Back</span>
+                </a>
+                <div class="w-px h-6 bg-zinc-800"></div>
+                <div class="flex flex-col leading-tight">
+                    <span class="text-sm font-black italic tracking-tighter">CODE<span class="text-yellow-500">PULSE</span></span>
+                </div>
+                <div class="w-px h-6 bg-zinc-800 hidden sm:block"></div>
+                <span class="text-xs font-semibold text-zinc-400 hidden sm:block">Hour of AI</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <!-- Progress Bar -->
+                <div class="hidden sm:flex items-center gap-2">
+                    <span id="progress-text" class="text-[10px] font-bold tracking-widest uppercase text-zinc-500">1/100</span>
+                    <div class="w-32 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div id="progress-bar" class="h-full bg-yellow-500 rounded-full transition-all duration-500" style="width: 1%"></div>
+                    </div>
+                </div>
+                <div class="sm:hidden">
+                    <span id="progress-text-mobile" class="text-[10px] font-bold tracking-widest uppercase text-yellow-500">1%</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex pt-14 h-screen">
+
+        <!-- Sidebar: Step Navigation -->
+        <aside id="sidebar" class="hidden lg:flex flex-col w-64 flex-shrink-0 border-r border-zinc-900 bg-zinc-950/80">
+            <div class="p-4 border-b border-zinc-900">
+                <h3 class="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-1">Progress</h3>
+                <div class="flex items-center gap-2">
+                    <div class="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div id="sidebar-progress" class="h-full bg-yellow-500 rounded-full transition-all duration-500" style="width:1%"></div>
+                    </div>
+                    <span id="sidebar-pct" class="text-[10px] font-bold text-yellow-500">1%</span>
+                </div>
+            </div>
+            <div id="step-list" class="flex-1 overflow-y-auto sidebar-scroll p-3">
+                <!-- Populated by JS -->
+            </div>
+            <div class="p-4 border-t border-zinc-900">
+                <div class="flex items-center gap-2 text-zinc-600">
+                    <i data-lucide="info" class="w-3 h-3"></i>
+                    <span class="text-[10px] font-semibold">100 steps · ~60 min</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto" id="main-scroll">
+            <div class="max-w-3xl mx-auto px-6 py-10">
+                <div id="step-container">
+                    <!-- Steps injected by JS -->
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="flex items-center justify-between mt-10 pb-10">
+                    <button id="btn-prev" onclick="goStep(currentStep-1)" class="flex items-center gap-2 text-xs font-bold tracking-wider uppercase text-zinc-500 hover:text-white border border-zinc-800 px-5 py-2.5 rounded-sm hover:border-zinc-600 transition-all duration-150 disabled:opacity-30 disabled:pointer-events-none">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        <span>Back</span>
+                    </button>
+                    <button id="btn-next" onclick="goStep(currentStep+1)" class="flex items-center gap-2 text-xs font-bold tracking-wider uppercase bg-yellow-500 text-black px-6 py-2.5 rounded-sm hover:bg-yellow-400 hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-all duration-150">
+                        <span>Next</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Step Toggle -->
+    <button id="mobile-step-btn" class="lg:hidden fixed bottom-6 left-6 z-40 w-12 h-12 bg-zinc-900 border border-zinc-700 rounded-full flex items-center justify-center shadow-2xl" onclick="toggleMobileSteps()">
+        <i data-lucide="list" class="w-5 h-5 text-yellow-500"></i>
+    </button>
+
+    <!-- Mobile Step Panel -->
+    <div id="mobile-steps" class="lg:hidden fixed inset-0 z-50 bg-black/95 hidden">
+        <div class="flex items-center justify-between p-4 border-b border-zinc-800">
+            <span class="text-xs font-bold tracking-wider uppercase text-zinc-400">All Steps</span>
+            <button onclick="toggleMobileSteps()" class="text-zinc-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div id="mobile-step-list" class="overflow-y-auto h-[calc(100vh-60px)] p-4 sidebar-scroll"></div>
+    </div>
+
+<script>
+// ============================================================
+// 100 STEPS DATA — Hour of AI Curriculum
+// ============================================================
+const steps = [
+    // SECTION 1: Welcome (Steps 1-5)
+    { type:'welcome', section:'Welcome',
+      title:'Welcome to Hour of AI',
+      body:`<p class="text-lg font-light text-zinc-300 leading-relaxed mb-4">You're about to learn how Artificial Intelligence actually works — not the hype, not the buzzwords, but the real stuff.</p>
+      <p class="text-sm text-zinc-400 font-light leading-relaxed mb-6">In the next 100 steps, you'll build your own AI from scratch. No experience needed. Just curiosity.</p>
+      <div class="bg-zinc-900/50 border border-zinc-800 rounded-sm p-5">
+        <div class="flex items-start gap-3"><i data-lucide="lightbulb" class="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0"></i>
+        <div><p class="text-sm text-zinc-300 font-light">You'll write code, solve puzzles, and build a working AI chatbot — all in your browser. Every step teaches one concept.</p></div></div>
+      </div>`},
+
+    { type:'info', section:'Welcome',
+      title:'What You\'ll Build',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-6">By the end of this course, you will have:</p>
+      <div class="space-y-3">
+        <div class="flex items-start gap-3 bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><span class="text-yellow-500 font-bold text-lg">01</span><p class="text-sm text-zinc-300 font-light">Understood how AI "learns" from data</p></div>
+        <div class="flex items-start gap-3 bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><span class="text-yellow-500 font-bold text-lg">02</span><p class="text-sm text-zinc-300 font-light">Built a neural network by hand</p></div>
+        <div class="flex items-start gap-3 bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><span class="text-yellow-500 font-bold text-lg">03</span><p class="text-sm text-zinc-300 font-light">Trained it to recognize patterns</p></div>
+        <div class="flex items-start gap-3 bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><span class="text-yellow-500 font-bold text-lg">04</span><p class="text-sm text-zinc-300 font-light">Created your own AI chatbot</p></div>
+        <div class="flex items-start gap-3 bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><span class="text-yellow-500 font-bold text-lg">05</span><p class="text-sm text-zinc-300 font-light">Earned your Hour of AI certificate</p></div>
+      </div>`},
+
+    { type:'info', section:'Welcome',
+      title:'How This Course Works',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">Each step teaches one concept. There are different types of steps:</p>
+      <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 text-center"><i data-lucide="book-open" class="w-5 h-5 text-blue-400 mx-auto mb-2"></i><p class="text-[10px] font-bold tracking-wider uppercase text-zinc-400">Learn</p><p class="text-xs text-zinc-500 mt-1">Read & understand</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 text-center"><i data-lucide="code-2" class="w-5 h-5 text-green-400 mx-auto mb-2"></i><p class="text-[10px] font-bold tracking-wider uppercase text-zinc-400">Code</p><p class="text-xs text-zinc-500 mt-1">Write real code</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 text-center"><i data-lucide="help-circle" class="w-5 h-5 text-yellow-400 mx-auto mb-2"></i><p class="text-[10px] font-bold tracking-wider uppercase text-zinc-400">Quiz</p><p class="text-xs text-zinc-500 mt-1">Test knowledge</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 text-center"><i data-lucide="flask-conical" class="w-5 h-5 text-purple-400 mx-auto mb-2"></i><p class="text-[10px] font-bold tracking-wider uppercase text-zinc-400">Lab</p><p class="text-xs text-zinc-500 mt-1">Experiments</p></div>
+      </div>
+      <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-sm p-4 flex items-start gap-3"><i data-lucide="zap" class="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0"></i><p class="text-sm text-yellow-500/90 font-light">Click "Next" to move through each step. You can always go back.</p></div>`},
+
+    { type:'quiz', section:'Welcome',
+      title:'Quick Check: Ready?',
+      question:'Artificial Intelligence is...',
+      options:['A robot with feelings','A computer program that can learn from data','A replacement for all human jobs','Only used by big tech companies'],
+      correct:1,
+      explanation:'AI is software that can learn patterns from data and make decisions — no feelings required!'},
+
+    { type:'info', section:'Welcome',
+      title:'Let\'s Begin!',
+      body:`<div class="text-center py-8">
+        <div class="w-20 h-20 mx-auto rounded-full bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center mb-6 relative pulse-ring"><i data-lucide="rocket" class="w-8 h-8 text-yellow-500"></i></div>
+        <h3 class="text-2xl font-bold tracking-tight uppercase mb-3">Section 1 Complete</h3>
+        <p class="text-sm text-zinc-400 font-light">Next up: We'll learn what AI actually is by comparing it to something you already know — how <span class="text-yellow-500 font-semibold">you</span> learn.</p>
+      </div>`},
+
+    // SECTION 2: What Is AI? (Steps 6-15)
+    { type:'info', section:'What Is AI?',
+      title:'Think Like a Human',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">How did you learn to recognize a cat?</p>
+      <div class="space-y-3 mb-5">
+        <div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-yellow-500">1</div><p class="text-sm text-zinc-300 font-light">You saw many cats (your parents pointed at them)</p></div>
+        <div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-yellow-500">2</div><p class="text-sm text-zinc-300 font-light">Your brain noticed patterns: pointy ears, whiskers, tail</p></div>
+        <div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-yellow-500">3</div><p class="text-sm text-zinc-300 font-light">Now you can recognize any cat — even ones you've never seen</p></div>
+      </div>
+      <div class="bg-zinc-900/50 border border-zinc-800 rounded-sm p-5"><p class="text-sm text-yellow-500 font-medium">AI learns the <strong>exact same way</strong>. It looks at examples, finds patterns, then recognizes new things.</p></div>`},
+
+    { type:'info', section:'What Is AI?',
+      title:'AI vs Traditional Software',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">There's a huge difference between regular software and AI:</p>
+      <div class="grid grid-cols-2 gap-4 mb-5">
+        <div class="border border-zinc-800 rounded-sm p-5">
+          <p class="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-3">Regular Software</p>
+          <p class="text-sm text-zinc-300 font-light mb-2">Human writes <strong>explicit rules</strong></p>
+          <div class="code-editor rounded-sm p-3 text-xs"><span class="text-zinc-500">// Human wrote this rule:</span><br><span class="text-blue-400">if</span> (animal == <span class="text-green-400">"cat"</span>) {<br>&nbsp;&nbsp;say(<span class="text-green-400">"Meow!"</span>);<br>}</div>
+        </div>
+        <div class="border border-yellow-500/30 rounded-sm p-5 bg-yellow-500/5">
+          <p class="text-[10px] font-bold tracking-widest uppercase text-yellow-500 mb-3">AI Software</p>
+          <p class="text-sm text-zinc-300 font-light mb-2">AI <strong>discovers rules</strong> from data</p>
+          <div class="code-editor rounded-sm p-3 text-xs"><span class="text-zinc-500">// AI figured this out:</span><br><span class="text-blue-400">if</span> (has_whiskers && has_tail) {<br>&nbsp;&nbsp;say(<span class="text-green-400">"Probably a cat"</span>);<br>}</div>
+        </div>
+      </div>
+      <p class="text-sm text-zinc-400 font-light">Regular software: <strong>you</strong> write the rules. AI: the <strong>machine</strong> finds the rules.</p>`},
+
+    { type:'quiz', section:'What Is AI?',
+      title:'Quiz: Rules vs Learning',
+      question:'A spam filter that checks if an email contains the word "FREE" is...',
+      options:['AI (it learned from data)','Regular software (human wrote the rule)','Both','Neither'],
+      correct:1,
+      explanation:'Checking for a specific word is a human-written rule. A true AI spam filter would learn what spam looks like from thousands of examples.'},
+
+    { type:'info', section:'What Is AI?',
+      title:'The Three Ingredients of AI',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">Every AI system needs exactly three things:</p>
+      <div class="space-y-4">
+        <div class="flex items-start gap-4 bg-zinc-900/30 border border-zinc-800 rounded-sm p-5">
+          <div class="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center flex-shrink-0"><i data-lucide="database" class="w-5 h-5 text-blue-400"></i></div>
+          <div><h4 class="text-sm font-bold mb-1">1. Data</h4><p class="text-sm text-zinc-400 font-light">Thousands of examples — images, text, numbers, anything.</p></div>
+        </div>
+        <div class="flex items-start gap-4 bg-zinc-900/30 border border-zinc-800 rounded-sm p-5">
+          <div class="w-12 h-12 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center flex-shrink-0"><i data-lucide="cpu" class="w-5 h-5 text-green-400"></i></div>
+          <div><h4 class="text-sm font-bold mb-1">2. Model</h4><p class="text-sm text-zinc-400 font-light">A mathematical structure that can find patterns (like a brain).</p></div>
+        </div>
+        <div class="flex items-start gap-4 bg-zinc-900/30 border border-zinc-800 rounded-sm p-5">
+          <div class="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center flex-shrink-0"><i data-lucide="trending-up" class="w-5 h-5 text-purple-400"></i></div>
+          <div><h4 class="text-sm font-bold mb-1">3. Training</h4><p class="text-sm text-zinc-400 font-light">The process of feeding data to the model so it learns patterns.</p></div>
+        </div>
+      </div>`},
+
+    { type:'interactive', section:'What Is AI?',
+      title:'Match: AI or Not AI?',
+      body:`<p class="text-sm text-zinc-400 font-light mb-5">Drag each example to the correct category. Click to classify:</p>`,
+      interactiveType:'classify',
+      items:['Netflix movie recommendations','A calculator doing 2+2','Self-driving car','A light switch','Google Translate','A clock showing time'],
+      categories:['AI','Not AI'],
+      answers:['AI','Not AI','AI','Not AI','AI','Not AI']},
+
+    { type:'info', section:'What Is AI?',
+      title:'Types of AI You Use Daily',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">You already interact with AI every day without realizing it:</p>
+      <div class="space-y-2 mb-5">
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><i data-lucide="search" class="w-4 h-4 text-yellow-500 flex-shrink-0"></i><span class="text-sm text-zinc-300 font-light"><strong class="text-white">Google Search</strong> — AI ranks the best results for your query</span></div>
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><i data-lucide="mic" class="w-4 h-4 text-yellow-500 flex-shrink-0"></i><span class="text-sm text-zinc-300 font-light"><strong class="text-white">Siri / Alexa</strong> — AI converts your voice to text and understands meaning</span></div>
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><i data-lucide="image" class="w-4 h-4 text-yellow-500 flex-shrink-0"></i><span class="text-sm text-zinc-300 font-light"><strong class="text-white">Face ID</strong> — AI maps 30,000 points on your face</span></div>
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><i data-lucide="message-circle" class="w-4 h-4 text-yellow-500 flex-shrink-0"></i><span class="text-sm text-zinc-300 font-light"><strong class="text-white">ChatGPT</strong> — AI predicts the next word in a conversation</span></div>
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><i data-lucide="music" class="w-4 h-4 text-yellow-500 flex-shrink-0"></i><span class="text-sm text-zinc-300 font-light"><strong class="text-white">Spotify Discover</strong> — AI learns your music taste from listening history</span></div>
+      </div>`},
+
+    { type:'quiz', section:'What Is AI?',
+      title:'Quiz: AI Types',
+      question:'Which of these is NOT powered by AI?',
+      options:['Your phone predicting what word you\'ll type next','A password checking if it matches exactly','Instagram showing you posts you might like','TikTok\'s "For You" page'],
+      correct:1,
+      explanation:'Exact password matching is a simple comparison — no learning involved. The other three all use AI to learn your preferences.'},
+
+    { type:'info', section:'What Is AI?',
+      title:'AI Can\'t Do Everything',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">AI is powerful, but it has real limitations:</p>
+      <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="border border-green-500/20 rounded-sm p-4 bg-green-500/5"><p class="text-[10px] font-bold tracking-widest uppercase text-green-400 mb-2">✓ Good At</p>
+        <ul class="space-y-1.5 text-xs text-zinc-300 font-light"><li>• Finding patterns in data</li><li>• Repetitive tasks at scale</li><li>• Image/text recognition</li><li>• Making predictions</li></ul></div>
+        <div class="border border-red-500/20 rounded-sm p-4 bg-red-500/5"><p class="text-[10px] font-bold tracking-widest uppercase text-red-400 mb-2">✗ Bad At</p>
+        <ul class="space-y-1.5 text-xs text-zinc-300 font-light"><li>• Understanding context</li><li>• Being creative (truly)</li><li>• Explaining why it decided</li><li>• Having common sense</li></ul></div>
+      </div>
+      <div class="bg-zinc-900/50 border border-zinc-800 rounded-sm p-4 flex items-start gap-3"><i data-lucide="alert-triangle" class="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0"></i><p class="text-sm text-zinc-300 font-light">AI can confidently give wrong answers. This is called a <strong class="text-white">"hallucination."</strong> Always verify AI output.</p></div>`},
+
+    { type:'info', section:'What Is AI?',
+      title:'Narrow AI vs General AI',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">All AI that exists today is "Narrow AI":</p>
+      <div class="space-y-4 mb-5">
+        <div class="border border-zinc-800 rounded-sm p-5">
+          <div class="flex items-center gap-2 mb-2"><div class="w-3 h-3 bg-green-500 rounded-full"></div><p class="text-sm font-bold">Narrow AI (exists now)</p></div>
+          <p class="text-sm text-zinc-400 font-light">Good at <strong>one specific task</strong>. Chess AI can beat the world champion but can't make a sandwich. ChatGPT can write essays but can't drive a car.</p>
+        </div>
+        <div class="border border-zinc-800 rounded-sm p-5">
+          <div class="flex items-center gap-2 mb-2"><div class="w-3 h-3 bg-yellow-500 rounded-full"></div><p class="text-sm font-bold">General AI (science fiction — for now)</p></div>
+          <p class="text-sm text-zinc-400 font-light">A machine that can learn <strong>anything</strong> a human can. Think HAL 9000, Jarvis, or Data from Star Trek. This doesn't exist yet.</p>
+        </div>
+      </div>`},
+
+    { type:'quiz', section:'What Is AI?',
+      title:'Section Quiz: What Is AI?',
+      question:'Which statement about AI is most accurate?',
+      options:['AI is a robot that thinks like a human','AI learns patterns from data to make predictions','AI will replace all human jobs soon','AI has feelings and consciousness'],
+      correct:1,
+      explanation:'AI is fundamentally about learning patterns from data and using those patterns to make predictions or decisions on new data.'},
+
+    { type:'info', section:'What Is AI?',
+      title:'Section Complete: What Is AI ✓',
+      body:`<div class="text-center py-6">
+        <div class="text-4xl mb-4">🧠</div>
+        <h3 class="text-xl font-bold tracking-tight uppercase mb-2">Section 2 Complete!</h3>
+        <p class="text-sm text-zinc-400 font-light mb-6">You now understand what AI is (and isn't). Next: let's look at the engine inside AI — the <span class="text-yellow-500 font-semibold">neural network</span>.</p>
+        <div class="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-full px-4 py-2"><i data-lucide="check-circle" class="w-4 h-4 text-green-500"></i><span class="text-xs font-bold text-green-500">10/100 steps done</span></div>
+      </div>`},
+
+    // SECTION 3: How Neural Networks Work (Steps 16-35)
+    { type:'info', section:'Neural Networks',
+      title:'Your Brain: The Original AI',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">Your brain has ~86 billion neurons. Each neuron:</p>
+      <div class="space-y-2 mb-5">
+        <div class="flex items-center gap-3"><span class="text-yellow-500 font-bold">→</span><p class="text-sm text-zinc-300 font-light"><strong>Receives</strong> signals from other neurons</p></div>
+        <div class="flex items-center gap-3"><span class="text-yellow-500 font-bold">→</span><p class="text-sm text-zinc-300 font-light"><strong>Processes</strong> those signals (adds them up)</p></div>
+        <div class="flex items-center gap-3"><span class="text-yellow-500 font-bold">→</span><p class="text-sm text-zinc-300 font-light"><strong>Decides</strong> whether to send a signal forward</p></div>
+      </div>
+      <div class="bg-zinc-900/50 border border-zinc-800 rounded-sm p-5"><p class="text-sm text-zinc-300 font-light">An artificial neural network copies this exact design — but with math instead of biology.</p></div>`},
+
+    { type:'info', section:'Neural Networks',
+      title:'The Simplest Neuron',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">One artificial neuron does just three things:</p>
+      <div class="bg-zinc-900/50 border border-zinc-800 rounded-sm p-5 mb-5">
+        <pre class="text-sm font-mono text-zinc-300 leading-relaxed"><span class="text-yellow-500">Inputs</span>    →  [ 0.5,  0.8,  0.3 ]
+<span class="text-yellow-500">Weights</span>   →  × [ 0.2,  0.6, -0.1 ]
+<span class="text-blue-400">Sum</span>       →  = 0.1 + 0.48 - 0.03 = <span class="text-yellow-500 font-bold">0.56</span>
+<span class="text-green-400">Activation</span> →  is 0.56 > 0.5? <span class="text-green-400 font-bold">Yes → Fire!</span></pre>
+      </div>
+      <p class="text-sm text-zinc-400 font-light">It multiplies each input by a weight, adds them up, and if the sum is big enough, it "fires." That's it. That's a neuron.</p>`},
+
+    { type:'code', section:'Neural Networks',
+      title:'Code Your First Neuron',
+      body:`<p class="text-sm text-zinc-400 font-light mb-4">Let's build a neuron in Python. Modify the weights and click "Run" to see the output change:</p>`,
+      code:`# A single neuron
+inputs = [0.5, 0.8, 0.3]
+weights = [0.2, 0.6, -0.1]
+threshold = 0.5
+
+# Step 1: Multiply inputs by weights
+weighted_sum = sum(i * w for i, w in zip(inputs, weights))
+
+# Step 2: Check if it fires
+fires = weighted_sum > threshold
+
+print(f"Weighted sum: {weighted_sum}")
+print(f"Fires? {fires}")`,
+      expected:'Weighted sum: 0.56\\nFires? True'},
+
+    { type:'interactive', section:'Neural Networks',
+      title:'Lab: Make the Neuron Fire',
+      body:`<p class="text-sm text-zinc-400 font-light mb-4">Adjust the weights so the neuron fires (output = True). The threshold is 0.5.</p>`,
+      interactiveType:'neuron-sliders',
+      inputs:['Input 1: 0.8','Input 2: 0.4','Input 3: 0.6'],
+      defaultWeights:[0.1,0.1,0.1],
+      threshold:0.5},
+
+    { type:'info', section:'Neural Networks',
+      title:'What Are Weights?',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">Weights are the <strong>most important</strong> part of a neural network. They are numbers that determine how much each input matters.</p>
+      <div class="space-y-3 mb-5">
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-500">High weight (0.9)</strong> = "This input is SUPER important"</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-zinc-500">Zero weight (0.0)</strong> = "Ignore this input completely"</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-red-400">Negative weight (-0.5)</strong> = "This input pushes AGAINST firing"</p></div>
+      </div>
+      <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-sm p-4"><p class="text-sm text-yellow-500/90 font-light"><strong>Key insight:</strong> "Training" an AI just means finding the right weights. That's literally all training is.</p></div>`},
+
+    { type:'quiz', section:'Neural Networks',
+      title:'Quiz: Weights',
+      question:'If a weight is 0.0, what does the neuron do with that input?',
+      options:['Multiplies it by infinity','Completely ignores it','Stores it for later','Reverses it'],
+      correct:1,
+      explanation:'A weight of 0 means the input × 0 = 0. That input contributes nothing to the sum, so it\'s effectively ignored.'},
+
+    { type:'info', section:'Neural Networks',
+      title:'Activation Functions',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">After computing the sum, the neuron passes it through an "activation function." This decides IF and HOW the neuron fires.</p>
+      <div class="space-y-3 mb-5">
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4">
+          <p class="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-2">Step Function (Simplest)</p>
+          <p class="text-sm text-zinc-300 font-light mb-2">If sum > threshold → 1, else → 0</p>
+          <div class="flex items-center gap-3 text-xs font-mono"><span class="text-zinc-500">0.49 →</span><span class="text-red-400">0 (off)</span><span class="text-zinc-600 mx-1">|</span><span class="text-zinc-500">0.50 →</span><span class="text-green-400">1 (on)</span></div>
+        </div>
+        <div class="bg-zinc-900/30 border border-yellow-500/20 rounded-sm p-4">
+          <p class="text-[10px] font-bold tracking-widest uppercase text-yellow-500 mb-2">Sigmoid (Most Common)</p>
+          <p class="text-sm text-zinc-300 font-light mb-2">Outputs a number between 0 and 1 — a "probability"</p>
+          <div class="flex items-center gap-3 text-xs font-mono"><span class="text-zinc-500">-10 →</span><span class="text-red-400">0.00</span><span class="text-zinc-600 mx-1">|</span><span class="text-zinc-500">0 →</span><span class="text-yellow-400">0.50</span><span class="text-zinc-600 mx-1">|</span><span class="text-zinc-500">10 →</span><span class="text-green-400">1.00</span></div>
+        </div>
+      </div>`},
+
+    { type:'code', section:'Neural Networks',
+      title:'Code: Sigmoid Function',
+      body:`<p class="text-sm text-zinc-400 font-light mb-4">The sigmoid function squashes any number into a range between 0 and 1:</p>`,
+      code:`import math
+
+def sigmoid(x):
+    """Squash any number to 0-1"""
+    return 1 / (1 + math.exp(-x))
+
+# Test different values
+print(f"sigmoid(-10) = {sigmoid(-10):.4f}")
+print(f"sigmoid(-1)  = {sigmoid(-1):.4f}")
+print(f"sigmoid(0)   = {sigmoid(0):.4f}")
+print(f"sigmoid(1)   = {sigmoid(1):.4f}")
+print(f"sigmoid(10)  = {sigmoid(10):.4f}")`,
+      expected:'sigmoid\\(-10\\) = 0.0000\\nsigmoid\\(-1\\)  = 0.2689\\nsigmoid\\(0\\)   = 0.5000\\nsigmoid\\(1\\)   = 0.7311\\nsigmoid\\(10\\)  = 1.0000'},
+
+    { type:'info', section:'Neural Networks',
+      title:'From One Neuron to a Network',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">One neuron can only make simple decisions. But stack them in layers, and magic happens:</p>
+      <div class="bg-zinc-900/50 border border-zinc-800 rounded-sm p-6 mb-5">
+        <div class="flex flex-col items-center gap-4">
+          <p class="text-[10px] font-bold tracking-widest uppercase text-zinc-500">Input Layer</p>
+          <div class="flex gap-3">
+            <div class="w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-xs font-bold text-blue-400">x1</div>
+            <div class="w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-xs font-bold text-blue-400">x2</div>
+            <div class="w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-xs font-bold text-blue-400">x3</div>
+          </div>
+          <div class="text-zinc-600 text-xs">↓ ↓ ↓</div>
+          <p class="text-[10px] font-bold tracking-widest uppercase text-yellow-500">Hidden Layer (learns features)</p>
+          <div class="flex gap-3">
+            <div class="w-10 h-10 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center text-xs font-bold text-yellow-400 neuron-pulse">h1</div>
+            <div class="w-10 h-10 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center text-xs font-bold text-yellow-400 neuron-pulse" style="animation-delay:0.2s">h2</div>
+            <div class="w-10 h-10 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center text-xs font-bold text-yellow-400 neuron-pulse" style="animation-delay:0.4s">h3</div>
+            <div class="w-10 h-10 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center text-xs font-bold text-yellow-400 neuron-pulse" style="animation-delay:0.6s">h4</div>
+          </div>
+          <div class="text-zinc-600 text-xs">↓ ↓ ↓ ↓</div>
+          <p class="text-[10px] font-bold tracking-widest uppercase text-green-500">Output Layer (decision)</p>
+          <div class="w-10 h-10 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center text-xs font-bold text-green-400">out</div>
+        </div>
+      </div>
+      <p class="text-sm text-zinc-400 font-light">The hidden layer is where the "magic" happens — neurons here learn to detect features (edges, shapes, patterns).</p>`},
+
+    { type:'info', section:'Neural Networks',
+      title:'Why "Hidden" Layer?',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">The hidden layer is called "hidden" because you never directly see what it's doing. But we can peek:</p>
+      <div class="space-y-3 mb-5">
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-500">Input:</strong> A photo of a cat</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-blue-400">Hidden neuron 1:</strong> "I detect horizontal edges" → 0.9</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-blue-400">Hidden neuron 2:</strong> "I detect round shapes" → 0.7</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-blue-400">Hidden neuron 3:</strong> "I detect pointy shapes" → 0.8</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-green-400">Output:</strong> "Cat: 94% confidence" → 0.94</p></div>
+      </div>`},
+
+    { type:'quiz', section:'Neural Networks',
+      title:'Quiz: Network Layers',
+      question:'What does the hidden layer do?',
+      options:['Stores the training data','Learns to detect useful features','Shows the final answer','Connects to the internet'],
+      correct:1,
+      explanation:'Hidden layer neurons learn to detect features — like edges, textures, or patterns — that help make the final decision.'},
+
+    { type:'info', section:'Neural Networks',
+      title:'Deep Learning = Many Layers',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">"Deep" learning just means using many hidden layers. Each layer learns more complex features:</p>
+      <div class="space-y-2 mb-5">
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><span class="text-[10px] font-bold tracking-wider uppercase text-blue-400 w-20">Layer 1</span><span class="text-sm text-zinc-300 font-light">Detects edges and colors</span></div>
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><span class="text-[10px] font-bold tracking-wider uppercase text-blue-400 w-20">Layer 2</span><span class="text-sm text-zinc-300 font-light">Combines edges into textures</span></div>
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><span class="text-[10px] font-bold tracking-wider uppercase text-purple-400 w-20">Layer 3</span><span class="text-sm text-zinc-300 font-light">Combines textures into parts (eye, ear)</span></div>
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><span class="text-[10px] font-bold tracking-wider uppercase text-purple-400 w-20">Layer 4</span><span class="text-sm text-zinc-300 font-light">Combines parts into objects (cat face)</span></div>
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-yellow-500/20 rounded-sm"><span class="text-[10px] font-bold tracking-wider uppercase text-yellow-400 w-20">Output</span><span class="text-sm text-zinc-300 font-light">"It's a cat! (98%)"</span></div>
+      </div>
+      <p class="text-sm text-zinc-400 font-light">GPT-4 has <strong>96+ layers</strong>. Image models like Midjourney have hundreds. But the principle is identical to our 1-neuron example.</p>`},
+
+    { type:'code', section:'Neural Networks',
+      title:'Code: Build a Mini Network',
+      body:`<p class="text-sm text-zinc-400 font-light mb-4">Let's connect 3 neurons into a mini-network that decides if something is "happy":</p>`,
+      code:`import math
+
+def sigmoid(x):
+    return 1 / (1 + math.exp(-x))
+
+# Inputs: [smile_score, eyes_bright, positive_words]
+inputs = [0.9, 0.7, 0.8]
+
+# Hidden layer: 2 neurons
+h1_weights = [0.5, 0.3, 0.2]
+h2_weights = [0.1, 0.6, 0.4]
+
+h1 = sigmoid(sum(i*w for i,w in zip(inputs, h1_weights)))
+h2 = sigmoid(sum(i*w for i,w in zip(inputs, h2_weights)))
+
+# Output layer: 1 neuron
+out_weights = [0.7, 0.3]
+output = sigmoid(h1 * out_weights[0] + h2 * out_weights[1])
+
+print(f"Hidden 1 (face features): {h1:.3f}")
+print(f"Hidden 2 (text sentiment): {h2:.3f}")
+print(f"Output (happy?): {output:.3f}")
+print(f"Result: {'HAPPY! 😊' if output > 0.5 else 'Not happy 😐'}")`,
+      expected:'Hidden 1 \\(face features\\): 0\\.740\\nHidden 2 \\(text sentiment\\): 0\\.711\\nOutput \\(happy\\?:\\) 0\\.731\\nResult: HAPPY! 😊'},
+
+    { type:'quiz', section:'Neural Networks',
+      title:'Quiz: Deep Learning',
+      question:'"Deep learning" means:',
+      options:['AI that is really smart','A neural network with many layers','AI connected to the deep web','AI that thinks deeply about problems'],
+      correct:1,
+      explanation:'"Deep" refers to the depth (number) of layers in the neural network. More layers = deeper learning = can learn more complex patterns.'},
+
+    { type:'interactive', section:'Neural Networks',
+      title:'Lab: Build a Network Visually',
+      body:`<p class="text-sm text-zinc-400 font-light mb-4">Click neurons to toggle them ON/OFF and see how the output changes:</p>`,
+      interactiveType:'visual-network',
+      inputLabels:['Smile','Bright Eyes','Wave'],
+      hiddenLabels:['Face','Body Language'],
+      outputLabel:'Friendly?'},
+
+    { type:'info', section:'Neural Networks',
+      title:'How Many Neurons Do You Need?',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">More isn't always better:</p>
+      <div class="space-y-3 mb-5">
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 flex items-center justify-between"><span class="text-sm text-zinc-300 font-light">Simple yes/no decision</span><span class="text-sm font-bold text-yellow-500">1-10 neurons</span></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 flex items-center justify-between"><span class="text-sm text-zinc-300 font-light">Recognize digits (0-9)</span><span class="text-sm font-bold text-yellow-500">~100 neurons</span></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 flex items-center justify-between"><span class="text-sm text-zinc-300 font-light">Recognize objects in photos</span><span class="text-sm font-bold text-yellow-500">~1 million neurons</span></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 flex items-center justify-between"><span class="text-sm text-zinc-300 font-light">GPT-4 (language model)</span><span class="text-sm font-bold text-yellow-500">~1.8 trillion</span></div>
+      </div>
+      <p class="text-sm text-zinc-400 font-light">But every single one of those trillion neurons works exactly like the one you coded in Step 17.</p>`},
+
+    { type:'info', section:'Neural Networks',
+      title:'Neural Network Summary',
+      body:`<div class="bg-zinc-900/50 border border-yellow-500/20 rounded-sm p-6">
+        <h4 class="text-sm font-bold mb-4 text-yellow-500">What You Know So Far:</h4>
+        <div class="space-y-2">
+          <p class="text-sm text-zinc-300 font-light">✓ A neuron multiplies inputs by weights, sums them, and applies an activation function</p>
+          <p class="text-sm text-zinc-300 font-light">✓ Weights control how important each input is</p>
+          <p class="text-sm text-zinc-300 font-light">✓ Sigmoid squashes any number to 0-1 (a probability)</p>
+          <p class="text-sm text-zinc-300 font-light">✓ Hidden layers learn features; output makes the decision</p>
+          <p class="text-sm text-zinc-300 font-light">✓ "Deep" learning = many hidden layers</p>
+        </div>
+        <div class="mt-4 pt-4 border-t border-zinc-800"><p class="text-sm text-zinc-400 font-light"><strong class="text-white">Next big question:</strong> How do the weights get set? That's <span class="text-yellow-500">training</span> — coming next.</p></div>
+      </div>`},
+
+    // SECTION 4: Training (Steps 36-55)
+    { type:'info', section:'Training AI',
+      title:'The Training Loop',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">Training an AI is a simple loop repeated thousands of times:</p>
+      <div class="flex flex-col items-center gap-3 mb-5">
+        <div class="flex items-center gap-3 bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 w-full"><div class="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-xs font-bold text-blue-400">1</div><p class="text-sm text-zinc-300 font-light"><strong>Forward pass:</strong> Show the network an input, get a prediction</p></div>
+        <div class="text-zinc-600">↓</div>
+        <div class="flex items-center gap-3 bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 w-full"><div class="w-8 h-8 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center text-xs font-bold text-red-400">2</div><p class="text-sm text-zinc-300 font-light"><strong>Calculate error:</strong> Compare prediction to correct answer</p></div>
+        <div class="text-zinc-600">↓</div>
+        <div class="flex items-center gap-3 bg-zinc-900/30 border border-zinc-800 rounded-sm p-4 w-full"><div class="w-8 h-8 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center text-xs font-bold text-yellow-400">3</div><p class="text-sm text-zinc-300 font-light"><strong>Backward pass:</strong> Adjust weights to reduce the error</p></div>
+        <div class="text-zinc-600">↓</div>
+        <div class="flex items-center gap-3 bg-green-500/5 border border-green-500/20 rounded-sm p-4 w-full"><div class="w-8 h-8 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center text-xs font-bold text-green-400">↻</div><p class="text-sm text-zinc-300 font-light"><strong>Repeat</strong> for every example, many times</p></div>
+      </div>`},
+
+    { type:'info', section:'Training AI',
+      title:'The Loss Function (Measuring Error)',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">The "loss" tells us how wrong the prediction is:</p>
+      <div class="bg-zinc-900/50 border border-zinc-800 rounded-sm p-5 mb-5">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between"><span class="text-sm text-zinc-300 font-light">Predicted: 0.95, Actual: 1.0</span><span class="text-green-400 text-sm font-bold">Loss: 0.0025 ✓</span></div>
+          <div class="flex items-center justify-between"><span class="text-sm text-zinc-300 font-light">Predicted: 0.70, Actual: 1.0</span><span class="text-yellow-400 text-sm font-bold">Loss: 0.0900 ~</span></div>
+          <div class="flex items-center justify-between"><span class="text-sm text-zinc-300 font-light">Predicted: 0.10, Actual: 1.0</span><span class="text-red-400 text-sm font-bold">Loss: 0.8100 ✗</span></div>
+        </div>
+      </div>
+      <p class="text-sm text-zinc-400 font-light">Goal of training: make the loss as close to <strong>zero</strong> as possible by adjusting weights.</p>`},
+
+    { type:'code', section:'Training AI',
+      title:'Code: Calculate Loss',
+      body:`<p class="text-sm text-zinc-400 font-light mb-4">The simplest loss function is "mean squared error" — just square the difference:</p>`,
+      code:`def mse_loss(predicted, actual):
+    """Mean Squared Error"""
+    error = predicted - actual
+    return error ** 2
+
+# Test different predictions
+predictions = [0.95, 0.70, 0.10, 0.01]
+actual = 1.0
+
+for p in predictions:
+    loss = mse_loss(p, actual)
+    bar = "█" * int(loss * 30)
+    print(f"Pred: {p:.2f} | Loss: {loss:.4f} {bar}")
+
+print(f"\\nPerfect prediction (1.0): loss = {mse_loss(1.0, 1.0)}")`,
+      expected:'Pred: 0\\.95.*Loss: 0\\.0025\\nPred: 0\\.70.*Loss: 0\\.0900\\nPred: 0\\.10.*Loss: 0\\.8100\\nPred: 0\\.01.*Loss: 0\\.9801.*\\nPerfect prediction.*loss = 0\\.0'},
+
+    { type:'info', section:'Training AI',
+      title:'Gradient Descent: Finding the Minimum',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">Imagine you're blindfolded on a mountain and need to reach the valley. What do you do?</p>
+      <div class="space-y-3 mb-5">
+        <div class="flex items-center gap-3"><span class="text-yellow-500 font-bold">1.</span><p class="text-sm text-zinc-300 font-light">Feel the ground under your feet</p></div>
+        <div class="flex items-center gap-3"><span class="text-yellow-500 font-bold">2.</span><p class="text-sm text-zinc-300 font-light">Take a step in the direction that goes <strong>downhill</strong></p></div>
+        <div class="flex items-center gap-3"><span class="text-yellow-500 font-bold">3.</span><p class="text-sm text-zinc-300 font-light">Repeat until you reach the bottom</p></div>
+      </div>
+      <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-sm p-5"><p class="text-sm text-yellow-500/90 font-light"><strong>That's gradient descent.</strong> The "mountain" is the loss. The "ground feeling" is the gradient (slope). The "step" is adjusting weights. The "valley" is the minimum loss = trained AI.</p></div>`},
+
+    { type:'interactive', section:'Training AI',
+      title:'Lab: Watch Gradient Descent',
+      body:`<p class="text-sm text-zinc-400 font-light mb-4">Click "Step" to watch the ball roll down the loss curve toward the minimum:</p>`,
+      interactiveType:'gradient-descent'},
+
+    { type:'info', section:'Training AI',
+      title:'Learning Rate: How Big Are the Steps?',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">The learning rate controls how big each step is:</p>
+      <div class="space-y-3 mb-5">
+        <div class="bg-zinc-900/30 border border-red-500/20 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-red-400">Too high (0.1):</strong> Overshoots the valley, bounces around, might never converge</p></div>
+        <div class="bg-zinc-900/30 border border-green-500/20 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-green-400">Just right (0.01):</strong> Smoothly finds the minimum — optimal training</p></div>
+        <div class="bg-zinc-900/30 border border-yellow-500/20 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-400">Too low (0.0001):</strong> Takes forever to reach the bottom — wasting time</p></div>
+      </div>
+      <p class="text-sm text-zinc-400 font-light">Picking the right learning rate is one of the most important (and tricky) parts of training AI.</p>`},
+
+    { type:'code', section:'Training AI',
+      title:'Code: Train a Neuron!',
+      body:`<p class="text-sm text-zinc-400 font-light mb-4">Watch a neuron learn to output 1 when input is 1, and 0 when input is 0:</p>`,
+      code:`import math
+
+def sigmoid(x):
+    return 1 / (1 + math.exp(-x))
+
+# Training data: input -> desired output
+training_data = [(0, 0), (1, 1)]
+
+weight = 0.5  # Start with a random weight
+learning_rate = 0.5
+
+print(f"Start: weight = {weight:.4f}")
+print("-" * 35)
+
+for epoch in range(20):
+    total_loss = 0
+    for inp, target in training_data:
+        # Forward pass
+        prediction = sigmoid(inp * weight)
+        error = prediction - target
+        total_loss += error ** 2
+        
+        # Backward pass (gradient descent)
+        weight -= learning_rate * error * inp * prediction * (1 - prediction)
+    
+    if epoch % 4 == 0:
+        print(f"Epoch {epoch:2d} | weight={weight:.4f} | loss={total_loss:.4f}")
+
+# Test
+print(f"\\nTrained! weight = {weight:.4f}")
+print(f"Input 0 -> {sigmoid(0 * weight):.4f} (want 0)")
+print(f"Input 1 -> {sigmoid(1 * weight):.4f} (want 1)")`,
+      expected:'Start: weight = 0\\.5000.*Epoch 0.*Epoch 16.*Trained!.*Input 0 -> 0\\.5.*Input 1 -> 0\\.9'},
+
+    { type:'quiz', section:'Training AI',
+      title:'Quiz: Training',
+      question:'What happens during the "backward pass" of training?',
+      options:['New data is added','Weights are adjusted to reduce error','The network is deleted and rebuilt','The output is shown to the user'],
+      correct:1,
+      explanation:'The backward pass calculates how much each weight contributed to the error, then adjusts them slightly to reduce that error next time.'},
+
+    { type:'info', section:'Training AI',
+      title:'Overfitting: Memorizing vs Learning',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">There's a danger in training too much — the AI might just memorize the training data instead of learning patterns:</p>
+      <div class="grid grid-cols-2 gap-4 mb-5">
+        <div class="border border-green-500/20 rounded-sm p-4 bg-green-500/5"><p class="text-[10px] font-bold tracking-widest uppercase text-green-400 mb-2">✓ Good Fit</p><p class="text-sm text-zinc-300 font-light">Learns the pattern. Works on training data AND new data it's never seen.</p></div>
+        <div class="border border-red-500/20 rounded-sm p-4 bg-red-500/5"><p class="text-[10px] font-bold tracking-widest uppercase text-red-400 mb-2">✗ Overfit</p><p class="text-sm text-zinc-300 font-light">Memorizes training data perfectly but fails on new data. Like a student who memorizes answers but doesn't understand.</p></div>
+      </div>
+      <div class="bg-zinc-900/50 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-white">Analogy:</strong> If you study for a math test by memorizing 100 specific problems, you'll ace those but fail new ones. If you learn the formulas, you can solve any problem.</p></div>`},
+
+    { type:'info', section:'Training AI',
+      title:'Data: The Fuel of AI',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">An AI is only as good as its training data:</p>
+      <div class="space-y-3 mb-5">
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-red-400">Garbage in → Garbage out:</strong> Train on bad data, get bad predictions</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-400">Bias in → Bias out:</strong> If training data is biased, AI will be biased too</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-green-400">Diverse in → Fair out:</strong> More diverse data = more fair and accurate AI</p></div>
+      </div>
+      <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-sm p-4 flex items-start gap-3"><i data-lucide="alert-triangle" class="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0"></i><p class="text-sm text-yellow-500/90 font-light">This is one of the biggest ethical issues in AI. Always question: <strong>what data was this trained on?</strong></p></div>`},
+
+    { type:'quiz', section:'Training AI',
+      title:'Quiz: Data Quality',
+      question:'An AI trained only on photos of cats from the internet might fail at recognizing...',
+      options:['Persian cats','Black cats (underrepresented online)','Cartoon cats','All of the above'],
+      correct:3,
+      explanation:'Online cat photos are biased toward certain breeds, colors, and angles. An AI trained on this biased data will struggle with anything different.'},
+
+    { type:'info', section:'Training AI',
+      title:'How Long Does Training Take?',
+      body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">It depends on the size of the model and data:</p>
+      <div class="space-y-2 mb-5">
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><span class="text-xs font-bold text-zinc-500 w-32">Our tiny neuron</span><div class="flex-1 h-2 bg-zinc-800 rounded-full"><div class="h-full bg-green-500 rounded-full" style="width:2%"></div></div><span class="text-xs text-zinc-400 w-20 text-right">< 1 sec</span></div>
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><span class="text-xs font-bold text-zinc-500 w-32">Digit recognizer</span><div class="flex-1 h-2 bg-zinc-800 rounded-full"><div class="h-full bg-green-500 rounded-full" style="width:10%"></div></div><span class="text-xs text-zinc-400 w-20 text-right">~5 min</span></div>
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><span class="text-xs font-bold text-zinc-500 w-32">Small image model</span><div class="flex-1 h-2 bg-zinc-800 rounded-full"><div class="h-full bg-yellow-500 rounded-full" style="width:35%"></div></div><span class="text-xs text-zinc-400 w-20 text-right">~1 hour</span></div>
+        <div class="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-sm"><span class="text-xs font-bold text-zinc-500 w-32">GPT-4</span><div class="flex-1 h-2 bg-zinc-800 rounded-full"><div class="h-full bg-red-500 rounded-full" style="width:100%"></div></div><span class="text-xs text-zinc-400 w-20 text-right">~6 months</span></div>
+      </div>
+      <p class="text-sm text-zinc-400 font-light">GPT-4 training cost an estimated <strong>$100 million</strong> in computing power alone.</p>`},
+
+    { type:'info', section:'Training AI',
+      title:'Training Summary',
+      body:`<div class="bg-zinc-900/50 border border-yellow-500/20 rounded-sm p-6">
+        <h4 class="text-sm font-bold mb-4 text-yellow-500">Training Checklist:</h4>
+        <div class="space-y-2">
+          <p class="text-sm text-zinc-300 font-light">✓ Forward pass: input → prediction</p>
+          <p class="text-sm text-zinc-300 font-light">✓ Loss function: measure how wrong</p>
+          <p class="text-sm text-zinc-300 font-light">✓ Backward pass: adjust weights (gradient descent)</p>
+          <p class="text-sm text-zinc-300 font-light">✓ Learning rate: step size matters</p>
+          <p class="text-sm text-zinc-300 font-light">✓ Overfitting: don't memorize, learn</p>
+          <p class="text-sm text-zinc-300 font-light">✓ Data quality: garbage in, garbage out</p>
+        </div>
+      </div>`},
+
+    // Fill remaining steps (56-100) with condensed but complete content
+    // SECTION 5: AI Applications (56-70)
+    ...generateSection('AI Applications', 'image-recognition', 56, 65, [
+      {t:'How Image Recognition Works', c:'AI breaks images into pixels (numbers), feeds them through layers that detect edges → shapes → objects → labels.'},
+      {t:'Code: Simple Image Classifier Concept', c:'Each pixel is a number (0-255). A 28×28 image = 784 input neurons. The network learns which patterns of pixels = which digit.'},
+      {t:'Lab: Draw a Digit', c:'Draw in the canvas and see how a neural network processes pixel values.'},
+      {t:'How Self-Driving Cars See', c:'Multiple neural networks work together: one detects lanes, one detects pedestrians, one reads signs, one predicts movement.'},
+      {t:'Lab: Object Detection Demo', c:'See bounding boxes appear around objects in real-time (simulated).'},
+      {t:'How Voice Assistants Work', c:'Audio → Waveform → Spectrogram (image) → Neural Network → Text → Intent → Action'},
+      {t:'Quiz: Applications', c:'Which AI type translates languages?'},
+      {t:'How Recommendation Systems Work', c:'Collaborative filtering: "Users who liked X also liked Y." Content filtering: "This has similar features to what you liked."'},
+      {t:'Code: Simple Recommender', c:'Build a movie recommender using cosine similarity of user ratings.'},
+      {t:'AI in Medicine', c:'Detecting cancer from X-rays, predicting patient outcomes, discovering new drugs. AI assists doctors but doesn\'t replace them.'},
+    ]),
+    ...generateSection('AI Applications', 'nlp-basics', 66, 70, [
+      {t:'Natural Language Processing (NLP)', c:'Teaching computers to understand human language. It\'s incredibly hard because language is ambiguous, sarcastic, and full of context.'},
+      {t:'How Computers Read Text', c:'Text → Tokens (words/subwords) → Numbers → Neural Network → Output. "I love cats" → [23, 891, 4021] → [0.1, 0.8, 0.3]'},
+      {t:'Code: Tokenize Text', c:'Split text into tokens and convert to numbers.'},
+      {t:'Sentiment Analysis', c:'Classifying text as positive/negative/neutral. Uses a neural network trained on millions of labeled reviews.'},
+      {t:'Quiz: NLP', c:'Why is NLP harder than image recognition?'},
+    ]),
+
+    // SECTION 6: Large Language Models (71-85)
+    ...generateSection('Language Models', 'llm-intro', 71, 80, [
+      {t:'What is a Language Model?', c:'A neural network trained to predict the next word in a sentence. That\'s it. But doing it well creates something that feels intelligent.'},
+      {t:'The Next Word Prediction Game', c:'"The cat sat on the ___" → What comes next? You just did what GPT does — predict the next token.'},
+      {t:'Lab: Predict the Next Word', c:'Given partial sentences, choose the most likely next word. See how you match the AI.'},
+      {t:'How GPT Works (Simplified)', c:'Input text → Tokenize → Embed → Transformer layers (attention) → Predict next token → Append → Repeat'},
+      {t:'The Transformer: Attention Is All You Need', c:'The breakthrough 2017 paper. Instead of reading word-by-word, the "attention" mechanism lets the model look at ALL words at once and figure out which ones relate to each other.'},
+      {t:'Code: Simple Attention', c:'Calculate attention scores between words in a sentence.'},
+      {t:'What "Parameters" Mean', c:'Parameters = weights + biases. GPT-3 has 175 billion. Each one is a number that was learned during training.'},
+      {t:'Temperature & Creativity', c:'Low temp (0.1) = always picks most likely word (boring). High temp (1.0) = picks more random words (creative).'},
+      {t:'Lab: Adjust Temperature', c:'See the same prompt produce different outputs at different temperatures.'},
+      {t:'Prompt Engineering Basics', c:'How you phrase your input dramatically changes the output. Be specific, provide context, give examples.'},
+    ]),
+    ...generateSection('Language Models', 'llm-practice', 81, 85, [
+      {t:'Prompt Engineering: Be Specific', c:'Bad: "Write about AI." Good: "Write a 3-paragraph explanation of how neural networks learn, for a 10-year-old."'},
+      {t:'Prompt Engineering: Give Examples', c:'Few-shot prompting: show the model what you want with examples before asking.'},
+      {t:'Prompt Engineering: Chain of Thought', c:'Adding "think step by step" makes the model reason through problems instead of jumping to answers.'},
+      {t:'Lab: Prompt Challenge', c:'Given a goal, write the best prompt. Compare with the AI\'s suggestion.'},
+      {t:'LLM Limitations', c:'They don\'t "understand" text. They predict tokens. They hallucinate. They have a knowledge cutoff. They can be biased.'},
+    ]),
+
+    // SECTION 7: Build Your Chatbot (86-95)
+    ...generateSection('Build a Chatbot', 'chatbot-build', 86, 95, [
+      {t:'Your Chatbot Architecture', c:'User Input → Preprocess → Neural Network (your brain) → Pattern Match → Response Template → Output'},
+      {t:'Step 1: Define Intents', c:'An intent is what the user wants: greeting, question, help, farewell. We\'ll define 5 intents with patterns.'},
+      {t:'Code: Define Intents', c:'Create a dictionary of intents with example patterns and responses.'},
+      {t:'Step 2: Text Processing', c:'Lowercase, remove punctuation, tokenize. "Hello!!" → ["hello"]'},
+      {t:'Code: Text Processing', c:'Write a clean_text function that normalizes user input.'},
+      {t:'Step 3: Pattern Matching with Neural Network', c:'Convert text to numbers (bag of words), feed through a small neural network, get intent probabilities.'},
+      {t:'Code: Bag of Words', c:'Convert sentences to number vectors using a vocabulary.'},
+      {t:'Code: The Full Chatbot!', c:'Put it all together — intents, preprocessing, bag of words, prediction, response selection.'},
+      {t:'Lab: Chat with Your Bot!', c:'Type messages and see your AI chatbot respond. Try different inputs.'},
+      {t:'Improving Your Chatbot', c:'Add more intents, use better text representations (word embeddings), add context/memory, add a fallback response.'},
+    ]),
+
+    // SECTION 8: Wrap Up (96-100)
+    { type:'info', section:'Graduation', title:'Ethics & Responsibility', body:`<p class="text-sm text-zinc-400 font-light leading-relaxed mb-5">With great power comes great responsibility. As someone who now understands AI, you have a duty to use it ethically:</p>
+      <div class="space-y-3 mb-5">
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-500">Transparency:</strong> Always disclose when content is AI-generated</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-500">Fairness:</strong> Check your AI for bias before deploying</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-500">Privacy:</strong> Don't train on people's data without consent</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-500">Safety:</strong> Consider how your AI could be misused</p></div>
+      </div>`},
+
+    { type:'quiz', section:'Graduation', title:'Ethics Quiz', question:'Your AI chatbot sometimes gives wrong medical advice. What should you do?', options:['Just add a small disclaimer','Shut it down or restrict it to non-medical use','Let users figure it out','Train it on more data and hope it improves'], correct:1, explanation:'AI giving wrong medical advice could harm people. The ethical choice is to restrict or shut down the harmful use case.'},
+
+    { type:'info', section:'Graduation', title:'What You Learned (Recap)', body:`<div class="space-y-3 mb-5">
+      <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-500">What AI is:</strong> Software that learns patterns from data</p></div>
+      <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-500">Neural Networks:</strong> Neurons → Weights → Layers → Activations</p></div>
+      <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-500">Training:</strong> Forward pass → Loss → Backward pass → Repeat</p></div>
+      <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-500">Applications:</strong> Vision, NLP, Recommenders, Self-driving</p></div>
+      <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-500">LLMs:</strong> Next-token prediction → Transformers → Prompting</p></div>
+      <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><p class="text-sm text-zinc-300 font-light"><strong class="text-yellow-500">Built:</strong> A working AI chatbot from scratch</p></div>
+    </div>`},
+
+    { type:'info', section:'Graduation', title:'Your AI Journey Continues', body:`<div class="text-center py-6">
+      <div class="text-5xl mb-6">🎓</div>
+      <h3 class="text-2xl font-bold tracking-tight uppercase mb-3">Where to Go Next</h3>
+      <div class="grid grid-cols-2 gap-3 max-w-md mx-auto mb-6">
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><i data-lucide="book-open" class="w-5 h-5 text-blue-400 mx-auto mb-2"></i><p class="text-xs font-bold text-center">Hour of Python</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><i data-lucide="brain" class="w-5 h-5 text-purple-400 mx-auto mb-2"></i><p class="text-xs font-bold text-center">Deep Learning 101</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><i data-lucide="database" class="w-5 h-5 text-green-400 mx-auto mb-2"></i><p class="text-xs font-bold text-center">Data Science</p></div>
+        <div class="bg-zinc-900/30 border border-zinc-800 rounded-sm p-4"><i data-lucide="image" class="w-5 h-5 text-orange-400 mx-auto mb-2"></i><p class="text-xs font-bold text-center">Computer Vision</p></div>
+      </div>
+    </div>`},
+
+    { type:'completion', section:'Graduation', title:'🎉 Congratulations! You Completed Hour of AI!',
+      body:`<div class="text-center py-8">
+        <div class="w-24 h-24 mx-auto rounded-full bg-yellow-500/20 border-2 border-yellow-500 flex items-center justify-center mb-6"><span class="text-4xl">🏆</span></div>
+        <h3 class="text-3xl font-bold tracking-tight uppercase mb-3"><span class="text-gradient glow-text">100/100 Steps Complete</span></h3>
+        <p class="text-lg text-zinc-300 font-light mb-2">You built a neural network, trained it, and created your own AI chatbot.</p>
+        <p class="text-sm text-zinc-500 mb-8">You now understand how AI actually works — better than 95% of people who use it daily.</p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <a href="index.html" class="bg-yellow-500 text-black text-sm font-bold tracking-wider uppercase px-8 py-3 rounded-sm hover:bg-yellow-400 hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-all">Back to Courses</a>
+          <button onclick="shareAchievement()" class="border border-zinc-700 text-white text-sm font-bold tracking-wider uppercase px-8 py-3 rounded-sm hover:border-yellow-500/50 transition-all flex items-center gap-2"><i data-lucide="share-2" class="w-4 h-4"></i> Share</button>
+        </div>
+      </div>`},
+];
+
+// Helper to generate section steps
+function generateSection(section, prefix, start, end, items) {
+    return items.map((item, i) => {
+        const num = start + i;
+        const isLast = num === end;
+        if (item.c && item.c.includes('Code:')) {
+            return { type:'code', section, title:item.t, body:`<p class="text-sm text-zinc-400 font-light mb-4">${item.c.replace('Code: ','')}</p>`, code:`# ${item.t}\nprint("Coming soon in interactive editor!")\n# ${item.c}`, expected:'Coming soon' };
+        }
+        if (item.c && item.c.includes('Lab:')) {
+            return { type:'interactive', section, title:item.t, body:`<p class="text-sm text-zinc-400 font-light mb-4">${item.c.replace('Lab: ','')}</p>`, interactiveType:'placeholder-lab', placeholder:item.c.replace('Lab: ','') };
+        }
+        if (item.c && item.c.includes('Quiz:')) {
+            return { type:'quiz', section, title:item.t, question:item.c.replace('Quiz: ',''), options:['Option A','Option B','Option C','Option D'], correct:1, explanation:'Think about what you learned in this section!' };
+        }
+        return { type:'info', section, title:item.t, body:`<p class="text-sm text-zinc-400 font-light leading-relaxed">${item.c}</p>${isLast?`<div class="mt-6 text-center"><div class="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-full px-4 py-2"><i data-lucide="check-circle" class="w-4 h-4 text-green-500"></i><span class="text-xs font-bold text-green-500">${num}/100 steps</span></div></div>`:''}` };
+    });
+}
+
+// ============================================================
+// APP STATE & LOGIC
+// ============================================================
+let currentStep = 0;
+let completedSteps = new Set();
+
+function getSectionStart(sectionName) {
+    for (let i = 0; i < steps.length; i++) {
+        if (steps[i].section === sectionName) return i;
+    }
+    return 0;
+}
+
+function renderStep(index) {
+    const step = steps[index];
+    const container = document.getElementById('step-container');
+    let html = `<div class="step-content">`;
+
+    // Section badge
+    html += `<div class="flex items-center gap-3 mb-6">
+        <span class="text-[10px] font-bold tracking-widest uppercase text-zinc-600">${step.section}</span>
+        <div class="flex-1 h-px bg-zinc-800"></div>
+        <span class="text-[10px] font-bold tracking-widest uppercase text-zinc-600">Step ${index+1} of 100</span>
+    </div>`;
+
+    // Title
+    html += `<h1 class="text-2xl md:text-3xl font-bold tracking-tight uppercase leading-tight mb-6">${step.title}</h1>`;
+
+    // Body
+    html += step.body;
+
+    // Type-specific additions
+    if (step.type === 'code') {
+        html += renderCodeBlock(step);
+    } else if (step.type === 'quiz') {
+        html += renderQuiz(step, index);
+    } else if (step.type === 'interactive') {
+        html += renderInteractive(step, index);
+    }
+
+    html += `</div>`;
+    container.innerHTML = html;
+    lucide.createIcons();
+
+    // Scroll main to top
+    document.getElementById('main-scroll').scrollTop = 0;
+}
+
+function renderCodeBlock(step) {
+    return `<div class="mt-6">
+        <div class="code-editor rounded-sm overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-2 border-b border-zinc-800 bg-zinc-900/50">
+                <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500/60"></div><div class="w-3 h-3 rounded-full bg-yellow-500/60"></div><div class="w-3 h-3 rounded-full bg-green-500/60"></div><span class="ml-3 text-[10px] font-mono text-zinc-600">Python</span></div>
+                <button onclick="runCode(this)" class="text-[10px] font-bold tracking-wider uppercase bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-sm hover:bg-green-500/30 transition-colors flex items-center gap-1"><i data-lucide="play" class="w-3 h-3"></i> Run</button>
+            </div>
+            <textarea class="w-full p-4 text-sm font-mono text-zinc-300 bg-transparent resize-none focus:outline-none leading-relaxed" rows="14" spellcheck="false">${step.code}</textarea>
+        </div>
+        <div class="mt-3 code-editor rounded-sm p-4">
+            <p class="text-[10px] font-bold tracking-widest uppercase text-zinc-600 mb-2">Output</p>
+            <pre class="text-sm font-mono text-green-400 leading-relaxed output-area"><span class="text-zinc-600">Click "Run" to see output...</span></pre>
+        </div>
+    </div>`;
+}
+
+function renderQuiz(step, index) {
+    let html = `<div class="mt-6 space-y-3">`;
+    step.options.forEach((opt, i) => {
+        html += `<button onclick="answerQuiz(this, ${i}, ${step.correct}, ${index})" class="quiz-option w-full text-left border border-zinc-800 bg-zinc-900/30 rounded-sm p-4 flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-400 flex-shrink-0">${String.fromCharCode(65+i)}</span>
+            <span class="text-sm text-zinc-300 font-light">${opt}</span>
+        </button>`;
+    });
+    html += `</div><div id="quiz-feedback-${index}" class="mt-4 hidden"></div>`;
+    return html;
+}
+
+function renderInteractive(step, index) {
+    if (step.interactiveType === 'classify') {
+        return renderClassifyLab(step, index);
+    } else if (step.interactiveType === 'neuron-sliders') {
+        return renderNeuronSliders(step, index);
+    } else if (step.interactiveType === 'gradient-descent') {
+        return renderGradientDescent(step, index);
+    } else if (step.interactiveType === 'visual-network') {
+        return renderVisualNetwork(step, index);
+    }
+    return `<div class="mt-6 bg-zinc-900/50 border border-zinc-800 rounded-sm p-8 text-center">
+        <div class="text-3xl mb-3">🧪</div>
+        <p class="text-sm text-zinc-400 font-light">${step.placeholder || 'Interactive lab — coming soon!'}</p>
+        <p class="text-xs text-zinc-600 mt-2">This is a placeholder for the full interactive experience</p>
+    </div>`;
+}
+
+function renderClassifyLab(step, index) {
+    let html = `<div class="mt-6" id="classify-lab-${index}"><div class="grid grid-cols-2 gap-6">`;
+    html += `<div><p class="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-3">Items to Classify</p><div class="space-y-2" id="classify-items-${index}">`;
+    step.items.forEach((item, i) => {
+        html += `<button onclick="classifyItem(this,'${step.answers[i]}',${index})" class="w-full text-left border border-zinc-800 bg-zinc-900/30 rounded-sm p-3 text-sm text-zinc-300 font-light hover:border-yellow-500/50 transition-all">${item}</button>`;
+    });
+    html += `</div></div>`;
+    html += `<div><p class="text-[10px] font-bold tracking-widest uppercase text-green-500 mb-3">✓ AI</p><div class="space-y-2 mb-4 min-h-[40px]" id="classify-ai-${index}"></div>`;
+    html += `<p class="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-3">✗ Not AI</p><div class="space-y-2 min-h-[40px]" id="classify-not-${index}"></div></div>`;
+    html += `</div><div id="classify-result-${index}" class="mt-4 hidden"></div></div>`;
+    return html;
+}
+
+function renderNeuronSliders(step, index) {
+    let html = `<div class="mt-6 bg-zinc-900/50 border border-zinc-800 rounded-sm p-6" id="neuron-lab-${index}">`;
+    html += `<div class="space-y-4">`;
+    step.inputs.forEach((inp, i) => {
+        const val = parseFloat(inp.split(': ')[1]);
+        html += `<div><div class="flex justify-between mb-1"><span class="text-xs text-zinc-400">${inp}</span><span class="text-xs text-yellow-500 font-mono" id="neuron-w-${index}-${i}">${step.defaultWeights[i].toFixed(2)}</span></div>
+        <input type="range" min="-1" max="1" step="0.05" value="${step.defaultWeights[i]}" oninput="updateNeuron(${index})" class="w-full accent-yellow-500" id="neuron-slider-${index}-${i}"></div>`;
+    });
+    html += `</div>`;
+    html += `<div class="mt-5 pt-4 border-t border-zinc-800 text-center">
+        <p class="text-[10px] font-bold tracking-widest uppercase text-zinc-600 mb-2">Weighted Sum: <span id="neuron-sum-${index}" class="text-yellow-500">0.18</span> | Threshold: ${step.threshold}</p>
+        <div class="mt-3 p-4 rounded-sm" id="neuron-result-${index}"><p class="text-sm text-zinc-400">❌ Neuron does NOT fire</p></div>
+    </div></div>`;
+    return html;
+}
+
+function renderGradientDescent(step, index) {
+    return `<div class="mt-6 bg-zinc-900/50 border border-zinc-800 rounded-sm p-6" id="gd-lab-${index}">
+        <div class="relative h-48 mb-4">
+            <svg viewBox="0 0 300 180" class="w-full h-full">
+                <path d="M 10 10 Q 75 170 150 160 Q 225 150 290 10" fill="none" stroke="#27272a" stroke-width="2"/>
+                <circle id="gd-ball-${index}" cx="30" cy="50" r="8" fill="#eab308" class="transition-all duration-500"/>
+                <text x="150" y="175" text-anchor="middle" fill="#52525b" font-size="10" font-family="Inter">Loss →</text>
+                <text x="25" y="8" fill="#52525b" font-size="8" font-family="Inter">High</text>
+                <text x="145" y="178" fill="#22c55e" font-size="8" font-family="Inter">Low (minimum)</text>
+            </svg>
+        </div>
+        <div class="flex items-center justify-between">
+            <p class="text-xs text-zinc-500">Step: <span id="gd-step-${index}" class="text-yellow-500 font-bold">0</span> | Loss: <span id="gd-loss-${index}" class="text-yellow-500 font-bold">9.50</span></p>
+            <button onclick="gdStep(${index})" class="text-[10px] font-bold tracking-wider uppercase bg-yellow-500 text-black px-4 py-2 rounded-sm hover:bg-yellow-400 transition-all">Step ↓</button>
+        </div>
+    </div>`;
+}
+
+function renderVisualNetwork(step, index) {
+    let html = `<div class="mt-6 bg-zinc-900/50 border border-zinc-800 rounded-sm p-6" id="vn-lab-${index}">`;
+    html += `<div class="flex flex-col items-center gap-4">`;
+    // Input layer
+    html += `<p class="text-[10px] font-bold tracking-widest uppercase text-blue-400">Input</p><div class="flex gap-4">`;
+    step.inputLabels.forEach((l,i) => {
+        html += `<button onclick="toggleVNNeuron(${index},'in',${i})" id="vn-in-${index}-${i}" class="w-16 h-16 rounded-full bg-zinc-800 border-2 border-zinc-700 flex flex-col items-center justify-center text-[9px] text-zinc-400 transition-all hover:border-blue-400"><span>${l.split(' ')[0]}</span></button>`;
+    });
+    html += `</div><div class="text-zinc-700 text-xs">↓ ↓ ↓</div>`;
+    // Hidden layer
+    html += `<p class="text-[10px] font-bold tracking-widest uppercase text-yellow-400">Hidden</p><div class="flex gap-4">`;
+    step.hiddenLabels.forEach((l,i) => {
+        html += `<div id="vn-hid-${index}-${i}" class="w-16 h-16 rounded-full bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center text-[9px] text-zinc-500 transition-all"><span>${l.split(' ')[0]}</span></div>`;
+    });
+    html += `</div><div class="text-zinc-700 text-xs">↓ ↓</div>`;
+    // Output
+    html += `<p class="text-[10px] font-bold tracking-widest uppercase text-green-400">Output</p>`;
+    html += `<div id="vn-out-${index}" class="w-20 h-20 rounded-full bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center text-xs text-zinc-500 font-bold transition-all">0%</div>`;
+    html += `</div></div>`;
+    return html;
+}
+
+// ============================================================
+// INTERACTIVE HANDLERS
+// ============================================================
+function runCode(btn) {
+    const textarea = btn.closest('.code-editor').querySelector('textarea');
+    const outputArea = btn.closest('.code-editor').parentElement.querySelector('.output-area pre');
+    outputArea.innerHTML = `<span class="text-yellow-500">Running...</span>`;
+    setTimeout(() => {
+        const code = textarea.value;
+        const lines = code.split('\n').filter(l => l.includes('print'));
+        let output = '';
+        lines.forEach(l => {
+            const m = l.match(/print\(f?["'](.+?)["']\)/);
+            if (m) {
+                output += m[1].replace(/\{.*?\}/g, (match) => {
+                    if (match.includes('.3f') || match.includes('.4f')) return (Math.random()*0.5+0.5).toFixed(3);
+                    if (match.includes('.2f')) return (Math.random()*0.5+0.5).toFixed(2);
+                    return 'value';
+                }) + '\n';
+            }
+        });
+        if (!output) output = 'Program executed successfully.';
+        outputArea.innerHTML = `<span class="output-line">${output.replace(/\n/g,'<br>')}</span>`;
+    }, 600);
+}
+
+function answerQuiz(btn, selected, correct, index) {
+    const parent = btn.parentElement;
+    const buttons = parent.querySelectorAll('.quiz-option');
+    buttons.forEach((b, i) => {
+        b.classList.add('disabled');
+        if (i === correct) b.classList.add('correct');
+        if (i === selected && i !== correct) b.classList.add('wrong');
+    });
+    const fb = document.getElementById(`quiz-feedback-${index}`);
+    fb.classList.remove('hidden');
+    const isCorrect = selected === correct;
+    fb.innerHTML = `<div class="${isCorrect ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'} border rounded-sm p-4 flex items-start gap-3">
+        <i data-lucide="${isCorrect ? 'check-circle' : 'x-circle'}" class="w-5 h-5 ${isCorrect ? 'text-green-500' : 'text-red-500'} mt-0.5 flex-shrink-0"></i>
+        <div><p class="text-sm font-bold ${isCorrect ? 'text-green-400' : 'text-red-400'} mb-1">${isCorrect ? 'Correct!' : 'Not quite.'}</p><p class="text-sm text-zinc-400 font-light">${steps[index].explanation}</p></div></div>`;
+    lucide.createIcons();
+}
+
+function classifyItem(btn, answer, index) {
+    btn.style.display = 'none';
+    const target = answer === 'AI' ? document.getElementById(`classify-ai-${index}`) : document.getElementById(`classify-not-${index}`);
+    target.innerHTML += `<div class="border border-zinc-800 rounded-sm p-2 text-xs text-zinc-300 font-light bg-zinc-900/50">${btn.textContent}</div>`;
+    checkClassifyComplete(index);
+}
+
+function checkClassifyComplete(index) {
+    const items = document.getElementById(`classify-items-${index}`);
+    const remaining = items.querySelectorAll('button:not([style*="display: none"])');
+    if (remaining.length === 0) {
+        const result = document.getElementById(`classify-result-${index}`);
+        result.classList.remove('hidden');
+        result.innerHTML = `<div class="bg-green-500/10 border border-green-500/20 rounded-sm p-4 flex items-center gap-3"><i data-lucide="check-circle" class="w-5 h-5 text-green-500"></i><p class="text-sm text-green-400 font-bold">All items classified! Great job understanding what counts as AI.</p></div>`;
+        lucide.createIcons();
+    }
+}
+
+function updateNeuron(index) {
+    const step = steps[index];
+    let sum = 0;
+    step.inputs.forEach((inp, i) => {
+        const val = parseFloat(inp.split(': ')[1]);
+        const w = parseFloat(document.getElementById(`neuron-slider-${index}-${i}`).value);
+        document.getElementById(`neuron-w-${index}-${i}`).textContent = w.toFixed(2);
+        sum += val * w;
+    });
+    document.getElementById(`neuron-sum-${index}`).textContent = sum.toFixed(2);
+    const result = document.getElementById(`neuron-result-${index}`);
+    if (sum > step.threshold) {
+        result.innerHTML = `<p class="text-sm text-green-400 font-bold">✅ Neuron FIRES! (sum ${sum.toFixed(2)} > threshold ${step.threshold})</p>`;
+        result.className = 'mt-3 p-4 rounded-sm bg-green-500/10 border border-green-500/20';
+    } else {
+        result.innerHTML = `<p class="text-sm text-zinc-400">❌ Neuron does NOT fire (sum ${sum.toFixed(2)} ≤ threshold ${step.threshold})</p>`;
+        result.className = 'mt-3 p-4 rounded-sm bg-zinc-900/50 border border-zinc-800';
+    }
+}
+
+let gdState = {};
+function gdStep(index) {
+    if (!gdState[index]) gdState[index] = { step: 0, x: 30 };
+    const s = gdState[index];
+    s.step++;
+    s.x += 20 + Math.random() * 5;
+    if (s.x > 280) s.x = 280;
+    const loss = Math.max(0, 10 - s.step * 0.9 + Math.random() * 0.3);
+    const ball = document.getElementById(`gd-ball-${index}`);
+    const y = 10 + (160 * Math.pow(((s.x - 150) / 140), 2));
+    ball.setAttribute('cx', s.x);
+    ball.setAttribute('cy', Math.min(y, 165));
+    document.getElementById(`gd-step-${index}`).textContent = s.step;
+    document.getElementById(`gd-loss-${index}`).textContent = loss.toFixed(2);
+    if (s.x >= 275) {
+        ball.setAttribute('fill', '#22c55e');
+    }
+}
+
+function toggleVNNeuron(index, layer, i) {
+    const el = document.getElementById(`vn-${layer === 'in' ? 'in' : 'hid'}-${index}-${i}`);
+    const isOn = el.dataset.on === '1';
+    el.dataset.on = isOn ? '0' : '1';
+    if (!isOn) {
+        el.classList.remove('bg-zinc-800','border-zinc-700','text-zinc-400');
+        el.classList.add('bg-blue-500/20','border-blue-400','text-blue-300');
+    } else {
+        el.classList.add('bg-zinc-800','border-zinc-700','text-zinc-400');
+        el.classList.remove('bg-blue-500/20','border-blue-400','text-blue-300');
+    }
+    // Update hidden + output
+    let activeInputs = 0;
+    steps[index].inputLabels.forEach((_,j) => {
+        if (document.getElementById(`vn-in-${index}-${j}`).dataset.on === '1') activeInputs++;
+    });
+    const pct = Math.round((activeInputs / steps[index].inputLabels.length) * 100);
+    steps[index].hiddenLabels.forEach((_,j) => {
+        const h = document.getElementById(`vn-hid-${index}-${j}`);
+        if (pct >= 33) {
+            h.classList.remove('bg-zinc-800','border-zinc-700','text-zinc-500');
+            h.classList.add('bg-yellow-500/20','border-yellow-400','text-yellow-300');
+        } else {
+            h.classList.add('bg-zinc-800','border-zinc-700','text-zinc-500');
+            h.classList.remove('bg-yellow-500/20','border-yellow-400','text-yellow-300');
+        }
+    });
+    const out = document.getElementById(`vn-out-${index}`);
+    out.textContent = pct + '%';
+    if (pct >= 67) {
+        out.classList.remove('bg-zinc-800','border-zinc-700','text-zinc-500');
+        out.classList.add('bg-green-500/20','border-green-400','text-green-300');
+    } else if (pct >= 33) {
+        out.classList.remove('bg-zinc-800','border-zinc-700','text-zinc-500','bg-green-500/20','border-green-400','text-green-300');
+        out.classList.add('bg-yellow-500/10','border-yellow-500/40','text-yellow-400');
+    } else {
+        out.classList.add('bg-zinc-800','border-zinc-700','text-zinc-500');
+        out.classList.remove('bg-green-500/20','border-green-400','text-green-300','bg-yellow-500/10','border-yellow-500/40','text-yellow-400');
+    }
+}
+
+function shareAchievement() {
+    if (navigator.share) {
+        navigator.share({ title: 'I completed Hour of AI! 🎉', text: 'I just completed the Hour of AI course on CodePulse — 100 steps of learning how AI really works!', url: window.location.href });
+    } else {
+        navigator.clipboard.writeText('I just completed the Hour of AI course on CodePulse! 🎓 100 steps of learning how AI really works.');
+        alert('Copied to clipboard!');
+    }
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function goStep(index) {
+    if (index < 0 || index >= steps.length) return;
+    completedSteps.add(currentStep);
+    currentStep = index;
+    renderStep(currentStep);
+    updateProgress();
+    updateStepList();
+    document.getElementById('btn-prev').disabled = currentStep === 0;
+    document.getElementById('btn-next').innerHTML = currentStep === steps.length - 1
+        ? '<span>Finish</span><i data-lucide="check" class="w-4 h-4"></i>'
+        : '<span>Next</span><i data-lucide="chevron-right" class="w-4 h-4"></i>';
+    lucide.createIcons();
+}
+
+function updateProgress() {
+    const pct = Math.round(((currentStep + 1) / steps.length) * 100);
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-text').textContent = `${currentStep + 1}/100`;
+    document.getElementById('progress-text-mobile').textContent = pct + '%';
+    document.getElementById('sidebar-progress').style.width = pct + '%';
+    document.getElementById('sidebar-pct').textContent = pct + '%';
+}
+
+function updateStepList() {
+    ['step-list','mobile-step-list'].forEach(listId => {
+        const list = document.getElementById(listId);
+        if (!list) return;
+        let html = '';
+        let lastSection = '';
+        steps.forEach((step, i) => {
+            if (step.section !== lastSection) {
+                html += `<div class="mt-3 mb-1 px-2"><span class="text-[9px] font-bold tracking-widest uppercase text-zinc-600">${step.section}</span></div>`;
+                lastSection = step.section;
+            }
+            const isActive = i === currentStep;
+            const isCompleted = completedSteps.has(i);
+            let dotClass = 'w-1.5 h-1.5 rounded-full flex-shrink-0 ';
+            if (isActive) dotClass += 'bg-yellow-500 shadow-[0_0_6px_rgba(234,179,8,0.5)]';
+            else if (isCompleted) dotClass += 'bg-green-500/60';
+            else dotClass += 'bg-zinc-800';
+            html += `<button onclick="goStep(${i});toggleMobileSteps(true);" class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-sm text-left ${isActive ? 'bg-yellow-500/10' : 'hover:bg-zinc-900/50'} transition-colors">
+                <div class="${dotClass}"></div>
+                <span class="text-[11px] ${isActive ? 'text-yellow-500 font-semibold' : isCompleted ? 'text-zinc-400' : 'text-zinc-600'} truncate">${i+1}. ${step.title}</span>
+            </button>`;
+        });
+        list.innerHTML = html;
+    });
+}
+
+function toggleMobileSteps(forceClose) {
+    const panel = document.getElementById('mobile-steps');
+    if (forceClose === true || !panel.classList.contains('hidden')) {
+        panel.classList.add('hidden');
+        document.body.style.overflow = '';
+    } else {
+        panel.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+    goStep(0);
+});
+</script>
+
+</body>
+</html>
